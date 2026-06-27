@@ -25,6 +25,7 @@ html, body {
 /* Button bar: always visible below the canvas */
 #button-bar {
   display: flex;
+  align-items: center;
   width: 100%;
   height: 40px;
   background: rgba(255, 255, 255, 0.95);
@@ -33,6 +34,30 @@ html, body {
 
 #button-bar button {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Close button — sits at the far right of the button bar */
+#close-btn {
+  margin-left: auto;
+  margin-right: 4px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #888;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+#close-btn:hover {
+  background: rgba(255, 59, 48, 0.15);
+  color: #ff3b30;
 }
 
 /* Panels injected by outfit_system.js / outfit_presets.js */

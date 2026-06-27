@@ -22,6 +22,9 @@
       "pet_drag.js",
       "pet_render.js",
       "pet_style.css",
+      "outfit_config.js",
+      "outfit_system.js",
+      "outfit_presets.js",
       "images/**"
     ],
     "win": {

@@ -1,7 +1,9 @@
-// Adapted from Pet_template_toy2 / pet_script.js drag logic (branch: claude/wind-clothing-physics-lgy26g)
-// In the desktop version, dragging moves the OS window instead of the sprite within the canvas.
+// Desktop drag: moves the OS window to follow the cursor.
+// Also toggles click-through so the background remains interactive when the
+// cursor is over a transparent part of the window.
 
 const canvas = document.getElementById('canvas')
+const hitCtx = canvas.getContext('2d')
 let isDragging = false
 
 function getPos(e) {
@@ -16,25 +18,50 @@ function getPos(e) {
   }
 }
 
-function isOnPet(x, y) {
-  // Hit-test against the centre 80% of the canvas (10% margin each side),
-  // matching the bounding-box check in the source pet_script.js.
-  const margin = 0.1
-  const w = canvas.width
-  const h = canvas.height
-  return (
-    x > w * margin && x < w * (1 - margin) &&
-    y > h * margin && y < h * (1 - margin)
-  )
+// Returns true when the canvas pixel under (x, y) is non-transparent.
+// This gives pixel-perfect hit-testing against the actual sprite shape.
+function isOpaquePixel(x, y) {
+  if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return false
+  try {
+    const px = hitCtx.getImageData(Math.floor(x), Math.floor(y), 1, 1).data
+    return px[3] > 10
+  } catch (_) {
+    // Fallback: treat the centre 80% as hit area (e.g. if canvas is tainted)
+    const margin = 0.1
+    return (
+      x > canvas.width  * margin && x < canvas.width  * (1 - margin) &&
+      y > canvas.height * margin && y < canvas.height * (1 - margin)
+    )
+  }
 }
 
+// ---- Click-through: pass transparent-area clicks to the desktop -----------
+// mousemove is forwarded even when the window is in ignore-mouse-events mode,
+// so this handler always runs and can re-enable interaction as needed.
+document.addEventListener('mousemove', (e) => {
+  const r = canvas.getBoundingClientRect()
+  const cx = e.clientX - r.left
+  const cy = e.clientY - r.top
+
+  // Interact when cursor is over an opaque pet pixel or over any UI element
+  // below the canvas (button bar, panels).
+  const overPet = isOpaquePixel(cx, cy)
+  const overUI  = e.clientY > r.bottom
+
+  window.electronAPI.setIgnoreMouseEvents(!(overPet || overUI))
+})
+
+// When the cursor leaves the window entirely, restore click-through
+document.addEventListener('mouseleave', () => {
+  window.electronAPI.setIgnoreMouseEvents(true)
+})
+
+// ---- Drag -----------------------------------------------------------------
 function startDrag(e) {
   const p = getPos(e)
-  if (!isOnPet(p.x, p.y)) return
+  if (!isOpaquePixel(p.x, p.y)) return
 
   isDragging = true
-  // Offset = cursor distance from the window's top-left corner.
-  // The main process uses this to keep the window anchored under the cursor.
   const offsetX = p.screenX - window.screenX
   const offsetY = p.screenY - window.screenY
   window.electronAPI.startDrag(offsetX, offsetY)
@@ -50,6 +77,5 @@ function endDrag() {
 canvas.addEventListener('mousedown', startDrag)
 window.addEventListener('mouseup', endDrag)
 
-// Touch support (touch-screen Windows / Mac trackpad tap-drag)
 canvas.addEventListener('touchstart', startDrag, { passive: false })
 window.addEventListener('touchend', endDrag)

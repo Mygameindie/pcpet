@@ -4,10 +4,8 @@ const path = require('path')
 let mainWindow
 let dragTimer = null
 
-// Default size: canvas (250) + button bar (40)
 const PET_W = 220
 const PET_H = 290
-// Expanded size when outfit/preset panel is open
 const PANEL_W = 360
 const PANEL_H = 560
 
@@ -32,6 +30,17 @@ function createWindow() {
     },
   })
 
+  // macOS: float above all apps and stay visible across every Space
+  if (process.platform === 'darwin') {
+    mainWindow.setAlwaysOnTop(true, 'screen-saver')
+    mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+  }
+
+  // Start click-through so the desktop/windows behind are fully interactive.
+  // { forward: true } keeps mouse events flowing to the renderer so we can
+  // detect when the cursor enters the pet and restore normal interaction.
+  mainWindow.setIgnoreMouseEvents(true, { forward: true })
+
   mainWindow.loadFile('index.html')
 }
 
@@ -42,11 +51,10 @@ app.whenReady().then(() => {
   })
 })
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
-})
+// Quit on all platforms when the last window closes (desktop pet has no menu bar)
+app.on('window-all-closed', () => app.quit())
 
-// ---- Drag: move window in sync with cursor at ~60 fps ----------------------
+// ---- Drag ---------------------------------------------------------------
 ipcMain.on('start-drag', (event, { offsetX, offsetY }) => {
   if (dragTimer) clearInterval(dragTimer)
   dragTimer = setInterval(() => {
@@ -60,7 +68,14 @@ ipcMain.on('stop-drag', () => {
   if (dragTimer) { clearInterval(dragTimer); dragTimer = null }
 })
 
-// ---- Outfit panel: expand window downward, keep it on screen ---------------
+// ---- Click-through toggle -----------------------------------------------
+// Renderer sends true when cursor is over transparent space (pass through),
+// false when cursor is over the pet sprite or UI controls (intercept).
+ipcMain.on('set-ignore-mouse-events', (event, ignore) => {
+  if (mainWindow) mainWindow.setIgnoreMouseEvents(ignore, { forward: true })
+})
+
+// ---- Outfit panel -------------------------------------------------------
 ipcMain.on('open-outfit-panel', () => {
   if (!mainWindow) return
   const { width: sw, height: sh } = screen.getPrimaryDisplay().workAreaSize
@@ -72,6 +87,8 @@ ipcMain.on('open-outfit-panel', () => {
 })
 
 ipcMain.on('close-outfit-panel', () => {
-  if (!mainWindow) return
-  mainWindow.setSize(PET_W, PET_H)
+  if (mainWindow) mainWindow.setSize(PET_W, PET_H)
 })
+
+// ---- Quit ---------------------------------------------------------------
+ipcMain.on('quit-app', () => app.quit())
