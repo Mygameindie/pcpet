@@ -28,7 +28,11 @@
       "images/**"
     ],
     "win": {
-      "target": "nsis"
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "forceCodeSigning": false,
+      "signingHashAlgorithms": []
     },
     "mac": {
       "target": "dmg",
