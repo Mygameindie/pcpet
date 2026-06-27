@@ -1,81 +1,109 @@
-// Desktop drag: moves the OS window to follow the cursor.
-// Also toggles click-through so the background remains interactive when the
-// cursor is over a transparent part of the window.
+// Drag: moves #pet-container around the fullscreen transparent window.
+// Also manages click-through so the desktop stays interactive behind the pet.
 
-const canvas = document.getElementById('canvas')
-const hitCtx = canvas.getContext('2d')
-let isDragging = false
+const canvas    = document.getElementById('canvas')
+const container = document.getElementById('pet-container')
+const hitCtx    = canvas.getContext('2d')
 
-function getPos(e) {
-  const r = canvas.getBoundingClientRect()
-  const clientX = e.touches ? e.touches[0].clientX : e.clientX
-  const clientY = e.touches ? e.touches[0].clientY : e.clientY
-  return {
-    x: clientX - r.left,
-    y: clientY - r.top,
-    screenX: e.screenX !== undefined ? e.screenX : clientX,
-    screenY: e.screenY !== undefined ? e.screenY : clientY,
-  }
-}
+let isDragging  = false
+let dragOffsetX = 0
+let dragOffsetY = 0
 
-// Returns true when the canvas pixel under (x, y) is non-transparent.
-// This gives pixel-perfect hit-testing against the actual sprite shape.
+// Returns true when the canvas pixel under (x, y) is non-transparent,
+// giving pixel-perfect hit-testing against the actual sprite shape.
 function isOpaquePixel(x, y) {
   if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return false
   try {
-    const px = hitCtx.getImageData(Math.floor(x), Math.floor(y), 1, 1).data
-    return px[3] > 10
+    return hitCtx.getImageData(Math.floor(x), Math.floor(y), 1, 1).data[3] > 10
   } catch (_) {
-    // Fallback: treat the centre 80% as hit area (e.g. if canvas is tainted)
-    const margin = 0.1
-    return (
-      x > canvas.width  * margin && x < canvas.width  * (1 - margin) &&
-      y > canvas.height * margin && y < canvas.height * (1 - margin)
-    )
+    // Fallback bounding-box if canvas is tainted
+    const m = 0.1
+    return x > canvas.width * m && x < canvas.width * (1 - m) &&
+           y > canvas.height * m && y < canvas.height * (1 - m)
   }
 }
 
-// ---- Click-through: pass transparent-area clicks to the desktop -----------
-// mousemove is forwarded even when the window is in ignore-mouse-events mode,
-// so this handler always runs and can re-enable interaction as needed.
+// ---- Click-through -------------------------------------------------------
+// mousemove is forwarded even when the OS window ignores mouse events, so
+// this handler always fires and can re-enable interaction as needed.
 document.addEventListener('mousemove', (e) => {
-  const r = canvas.getBoundingClientRect()
-  const cx = e.clientX - r.left
-  const cy = e.clientY - r.top
+  const el = document.elementFromPoint(e.clientX, e.clientY)
 
-  // Interact when cursor is over an opaque pet pixel or over any UI element
-  // below the canvas (button bar, panels).
-  const overPet = isOpaquePixel(cx, cy)
-  const overUI  = e.clientY > r.bottom
+  if (el === canvas) {
+    // Over the canvas — only interactive when over an opaque sprite pixel
+    const r  = canvas.getBoundingClientRect()
+    const cx = e.clientX - r.left
+    const cy = e.clientY - r.top
+    window.electronAPI.setIgnoreMouseEvents(!isOpaquePixel(cx, cy))
+    return
+  }
 
-  window.electronAPI.setIgnoreMouseEvents(!(overPet || overUI))
+  // Over any other element inside the container (button bar, panels) → interactive
+  if (container.contains(el)) {
+    window.electronAPI.setIgnoreMouseEvents(false)
+    return
+  }
+
+  // Over transparent background → click-through
+  window.electronAPI.setIgnoreMouseEvents(true)
 })
 
-// When the cursor leaves the window entirely, restore click-through
 document.addEventListener('mouseleave', () => {
   window.electronAPI.setIgnoreMouseEvents(true)
 })
 
-// ---- Drag -----------------------------------------------------------------
+// ---- Drag ----------------------------------------------------------------
+function getCanvasPos(e) {
+  const r = canvas.getBoundingClientRect()
+  return {
+    cx: (e.touches ? e.touches[0].clientX : e.clientX) - r.left,
+    cy: (e.touches ? e.touches[0].clientY : e.clientY) - r.top,
+    clientX: e.touches ? e.touches[0].clientX : e.clientX,
+    clientY: e.touches ? e.touches[0].clientY : e.clientY,
+  }
+}
+
 function startDrag(e) {
-  const p = getPos(e)
-  if (!isOpaquePixel(p.x, p.y)) return
+  const { cx, cy, clientX, clientY } = getCanvasPos(e)
+  if (!isOpaquePixel(cx, cy)) return
 
   isDragging = true
-  const offsetX = p.screenX - window.screenX
-  const offsetY = p.screenY - window.screenY
-  window.electronAPI.startDrag(offsetX, offsetY)
+  const cr = container.getBoundingClientRect()
+  dragOffsetX = clientX - cr.left
+  dragOffsetY = clientY - cr.top
+
+  // Switch to left/top so right/bottom don't fight the drag
+  container.style.right  = 'auto'
+  container.style.bottom = 'auto'
+  container.style.left   = cr.left + 'px'
+  container.style.top    = cr.top  + 'px'
+
   e.preventDefault()
 }
 
-function endDrag() {
+function onDrag(e) {
   if (!isDragging) return
-  isDragging = false
-  window.electronAPI.stopDrag()
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY
+
+  // Keep the container inside the viewport
+  const maxX = window.innerWidth  - container.offsetWidth
+  const maxY = window.innerHeight - container.offsetHeight
+  const x = Math.max(0, Math.min(clientX - dragOffsetX, maxX))
+  const y = Math.max(0, Math.min(clientY - dragOffsetY, maxY))
+
+  container.style.left = x + 'px'
+  container.style.top  = y + 'px'
 }
 
-canvas.addEventListener('mousedown', startDrag)
-window.addEventListener('mouseup', endDrag)
+function endDrag() {
+  isDragging = false
+}
 
-canvas.addEventListener('touchstart', startDrag, { passive: false })
-window.addEventListener('touchend', endDrag)
+canvas.addEventListener('mousedown',  startDrag)
+document.addEventListener('mousemove', onDrag)
+window.addEventListener('mouseup',    endDrag)
+
+canvas.addEventListener('touchstart', startDrag,  { passive: false })
+document.addEventListener('touchmove',  onDrag,   { passive: false })
+window.addEventListener('touchend',   endDrag)

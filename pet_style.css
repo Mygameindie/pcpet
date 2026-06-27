@@ -5,10 +5,22 @@
 }
 
 html, body {
+  width: 100%;
+  height: 100%;
   background: transparent;
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
+}
+
+/* Draggable container — starts at bottom-right, drag moves it anywhere */
+#pet-container {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
 }
 
 #canvas {
@@ -30,6 +42,7 @@ html, body {
   height: 40px;
   background: rgba(255, 255, 255, 0.95);
   border-top: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0 0 10px 10px;
 }
 
 #button-bar button {
@@ -63,5 +76,8 @@ html, body {
 /* Panels injected by outfit_system.js / outfit_presets.js */
 #dressup-panel,
 #preset-panel {
+  width: 340px !important;
+  border-radius: 10px;
+  margin-top: 6px;
   scrollbar-width: thin;
 }

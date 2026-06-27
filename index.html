@@ -7,11 +7,14 @@
   <link rel="stylesheet" href="pet_style.css">
 </head>
 <body>
-  <canvas id="canvas" width="220" height="250"></canvas>
-  <div id="button-bar">
-    <button id="close-btn" title="Close" onclick="window.electronAPI.quitApp()">✕</button>
+  <div id="pet-container">
+    <canvas id="canvas" width="220" height="250"></canvas>
+    <div id="button-bar">
+      <button id="close-btn" title="Close" onclick="window.electronAPI.quitApp()">✕</button>
+    </div>
+    <!-- outfit_system.js and outfit_presets.js inject buttons into #button-bar
+         and panels into #pet-container below the button bar -->
   </div>
-  <!-- outfit_system.js and outfit_presets.js inject buttons into #button-bar and panels below it -->
   <script src="outfit_config.js"></script>
   <script src="outfit_system.js"></script>
   <script src="outfit_presets.js"></script>

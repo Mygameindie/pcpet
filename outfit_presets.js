@@ -95,8 +95,8 @@ window.OUTFIT_PRESETS = [
   if (!panel) {
     panel = document.createElement("div");
     panel.id = "preset-panel";
-    panel.style.cssText = "width:100%;max-height:270px;overflow-y:auto;display:none;padding:10px;background:rgba(255,255,255,.97);box-shadow:0 -2px 8px rgba(0,0,0,.12);font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;scrollbar-width:thin;";
-    document.body.appendChild(panel);
+    panel.style.cssText = "max-height:270px;overflow-y:auto;display:none;padding:10px;background:rgba(255,255,255,.97);box-shadow:0 4px 16px rgba(0,0,0,.18);font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;scrollbar-width:thin;";
+    (document.getElementById("pet-container") || document.body).appendChild(panel);
   }
 
   function renderPanel() {
