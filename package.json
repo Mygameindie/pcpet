@@ -1,0 +1,35 @@
+{
+  "name": "pcpet",
+  "version": "1.0.0",
+  "description": "Desktop companion pet — drag anywhere on screen",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.mygameindie.pcpet",
+    "productName": "PC Pet",
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "pet_drag.js",
+      "pet_render.js",
+      "pet_style.css",
+      "images/**"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.entertainment"
+    }
+  }
+}
